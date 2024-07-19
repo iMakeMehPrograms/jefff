@@ -3,119 +3,82 @@
 #include "device_launch_parameters.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#define WIDTH (short)1
+#define HEIGHT (short)1
 
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
+// TARGA macros
+#define VERSION (char)0
+#define IDLENGTH (char)31
+#define IDMSG "jefff-generated raytraced image"
+#define CMT (char)0
+#define ITC (char)2
+#define XORIGIN (short)0
+#define YORIGIN (short)0
+#define IPS (char)24
+#define IDB (char)0b00010000
 
-__global__ void addKernel(int *c, const int *a, const int *b)
+typedef struct {
+    float r;
+    float g;
+    float b;
+} PIXEL;
+
+/* Writes a list of pixels to a TGA
+* const char* fn: c-string of the filename
+* const PIXEL* pixels: array of pixels to write
+* const unsigned int pixel_len: number of pixels (prevent overflows)
+* Writes a type 2 TARGA 24 file
+*/
+unsigned int writeTGA(const char* fn, const PIXEL* pixels, const unsigned int pixel_len);
+
+int main(int argc, char* argv[])
 {
-    int i = threadIdx.x;
-    c[i] = a[i] + b[i];
-}
-
-int main()
-{
-    const int arraySize = 5;
-    const int a[arraySize] = { 1, 2, 3, 4, 5 };
-    const int b[arraySize] = { 10, 20, 30, 40, 50 };
-    int c[arraySize] = { 0 };
-
-    // Add vectors in parallel.
-    cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addWithCuda failed!");
-        return 1;
+    printf("Running with args: ");
+    for (unsigned int i = 0; i < argc; i++) { printf(argv[i]); printf(argv[i]); }
+    printf(" \n");
+    if (argc <= 1) {
+        printf("Must provide filename as argument! \n(If you did provide a filename as an argument, simply move the name such that it is the second argument. This is due to the fact some systems provide the command path as the first argument, whereas some may not.) \n");
+        exit(-1);
     }
+    const unsigned int pixel_len = WIDTH * HEIGHT;
+    PIXEL image[pixel_len] = {{1.0f, 0.7f, 0.9f}};
 
-    printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n",
-        c[0], c[1], c[2], c[3], c[4]);
-
-    // cudaDeviceReset must be called before exiting in order for profiling and
-    // tracing tools such as Nsight and Visual Profiler to show complete traces.
-    cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceReset failed!");
-        return 1;
+    switch (writeTGA(argv[1], image, pixel_len)) {
+        case 0: printf("TGA written succesfully! \n"); break;
+        case 1: printf("TGA file couldn't be opened/created! \n"); break;
+        default: printf("Unknown error when writing TGA! \n"); break;
     }
 
     return 0;
 }
 
-// Helper function for using CUDA to add vectors in parallel.
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
-{
-    int *dev_a = 0;
-    int *dev_b = 0;
-    int *dev_c = 0;
-    cudaError_t cudaStatus;
-
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-        goto Error;
+unsigned int writeTGA(const char* fn, const PIXEL* pixels, const unsigned int pixel_len) {
+    FILE* targa = fopen(fn, "wb");
+    if (targa == NULL) {
+        return 1;
     }
-
-    // Allocate GPU buffers for three vectors (two input, one output)    .
-    cudaStatus = cudaMalloc((void**)&dev_c, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
+    fputc(IDLENGTH, targa); // length of identification msg
+    fputc(CMT, targa); // color map type (0 = ignore)
+    fputc(ITC, targa); // type of targa (2)
+    for (unsigned int i = 0; i < 5; i++) { // generates blank area where the color map is, since it should be ignored
+        fputc(0, targa);
     }
-
-    cudaStatus = cudaMalloc((void**)&dev_a, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
+    fputc((XORIGIN & 0x00FF), targa); fputc((XORIGIN & 0xFF00) / 256, targa); // x and y origins, weird bitmapping is to concatenate the usually 2-byte short into a 1-byte char
+    fputc((YORIGIN & 0x00FF), targa); fputc((YORIGIN & 0xFF00) / 256, targa);
+    fputc((WIDTH & 0x00FF), targa); fputc((WIDTH & 0xFF00) / 256, targa); // width and height using same bitmapping technique
+    fputc((HEIGHT & 0x00FF), targa); fputc((HEIGHT & 0xFF00) / 256, targa);
+    fputc(IPS, targa);
+    fputc(IDB, targa);
+    const char* idmsg = IDMSG;
+    for (unsigned int i = 0; i < IDLENGTH; i++) {
+        fputc(idmsg[i], targa);
     }
-
-    cudaStatus = cudaMalloc((void**)&dev_b, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
+    for (unsigned int i = 0; i < pixel_len; i++) {
+        fputc((char)roundf(pixels[i].b), targa);
+        fputc((char)roundf(pixels[i].g), targa);
+        fputc((char)roundf(pixels[i].r), targa);
     }
-
-    // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-    cudaStatus = cudaMemcpy(dev_b, b, size * sizeof(int), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-    // Launch a kernel on the GPU with one thread for each element.
-    addKernel<<<1, size>>>(dev_c, dev_a, dev_b);
-
-    // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-        goto Error;
-    }
-    
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
-
-    // Copy output vector from GPU buffer to host memory.
-    cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-Error:
-    cudaFree(dev_c);
-    cudaFree(dev_a);
-    cudaFree(dev_b);
-    
-    return cudaStatus;
+    return 0;
 }
