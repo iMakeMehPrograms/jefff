@@ -1,7 +1,33 @@
 ﻿  Compiling CUDA source file kernel.cu...
   
   C:\Users\erikr\kpr\source\repos\jefff>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.5\bin\nvcc.exe" -gencode=arch=compute_52,code=\"sm_52,compute_52\" --use-local-env -ccbin "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\bin\HostX64\x64" -x cu   -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.5\include"  -G   --keep-dir jefff\x64\Debug  -maxrregcount=0   --machine 64 --compile -cudart static  -g  -DWIN32 -DWIN64 -D_DEBUG -D_CONSOLE -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/Fdjefff\x64\Debug\vc143.pdb" -o C:\Users\erikr\kpr\source\repos\jefff\jefff\x64\Debug\kernel.cu.obj "C:\Users\erikr\kpr\source\repos\jefff\kernel.cu" 
+C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(65): warning #546-D: transfer of control bypasses initialization of:
+              variable "image" (declared at line 68)
+            goto MAINERR;
+            ^
+  
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+  
+C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(190): warning #68-D: integer conversion resulted in a change of sign
+        if (err != cudaSuccess) return -1;
+                                       ^
+  
+C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(65): warning #546-D: transfer of control bypasses initialization of:
+              variable "image" (declared at line 68)
+            goto MAINERR;
+            ^
+  
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+  
+C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(190): warning #68-D: integer conversion resulted in a change of sign
+        if (err != cudaSuccess) return -1;
+                                       ^
+  
   kernel.cu
-  tmpxft_000045d8_00000000-7_kernel.cudafe1.cpp
-C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(39): warning C4018: '<': signed/unsigned mismatch
+  tmpxft_000085fc_00000000-7_kernel.cudafe1.cpp
+C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(60): warning C4018: '<': signed/unsigned mismatch
+C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(68): warning C4533: initialization of 'image' is skipped by 'goto MAINERR'
+  C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(68): note: see declaration of 'image'
+  C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(102): note: see declaration of 'MAINERR'
+C:\Users\erikr\kpr\source\repos\jefff\kernel.cu(170): warning C4996: 'cudaThreadSynchronize': was declared deprecated
   jefff.vcxproj -> C:\Users\erikr\kpr\source\repos\jefff\x64\Debug\jefff.exe
